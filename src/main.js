@@ -400,18 +400,23 @@ function handlePointerMove(e) {
       s.points[1].y = worldPos.y;
     } else if (s.tool === 'text') {
       const originalHeight = Math.abs(state.resizeStartPoints[1].y - state.resizeStartPoints[0].y);
-      const newHeight = Math.abs(state.resizeStartPoints[1].y - worldPos.y);
+      const newHeight = Math.abs(worldPos.y - state.resizeStartPoints[0].y);
       const scale = originalHeight > 0 ? newHeight / originalHeight : 1;
       s.size = Math.max(2, Math.round(state.resizeStartSize * scale));
 
       const fontSize = s.size * 3;
       const tempCtx = paintCanvas.getContext('2d');
       tempCtx.font = `bold ${fontSize}px var(--font-family-ui)`;
-      const w = tempCtx.measureText(s.text).width;
+      const lines = s.text.split('\n');
+      let maxW = 0;
+      lines.forEach(line => {
+        const w = tempCtx.measureText(line).width;
+        if (w > maxW) maxW = w;
+      });
+      const totalH = lines.length * (fontSize * 1.2);
 
-      s.points[0].y = worldPos.y;
-      s.points[1].y = worldPos.y - fontSize;
-      s.points[1].x = s.points[0].x + w;
+      s.points[1].x = s.points[0].x + maxW;
+      s.points[1].y = s.points[0].y + totalH;
     }
     draw();
     return;
@@ -604,6 +609,14 @@ function createTextOverlay(clientX, clientY) {
   
   let isFinishing = false;
   
+  // Adjust textarea dimensions dynamically as user types
+  textarea.addEventListener('input', () => {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+    textarea.style.width = 'auto';
+    textarea.style.width = `${Math.max(150, textarea.scrollWidth)}px`;
+  });
+  
   function finishTextOverlay() {
     if (isFinishing) return;
     isFinishing = true;
@@ -617,14 +630,21 @@ function createTextOverlay(clientX, clientY) {
       const fontSize = state.currentSize * 3;
       const tempCtx = paintCanvas.getContext('2d');
       tempCtx.font = `bold ${fontSize}px var(--font-family-ui)`;
-      const w = tempCtx.measureText(text).width;
+      
+      const lines = text.split('\n');
+      let maxW = 0;
+      lines.forEach(line => {
+        const w = tempCtx.measureText(line).width;
+        if (w > maxW) maxW = w;
+      });
+      const totalH = lines.length * (fontSize * 1.2);
       
       addStroke({
         tool: 'text',
         text: text,
         points: [
           worldPos,
-          { x: worldPos.x + w, y: worldPos.y - fontSize }
+          { x: worldPos.x + maxW, y: worldPos.y + totalH }
         ],
         color: state.currentColor,
         size: state.currentSize
@@ -642,8 +662,8 @@ function createTextOverlay(clientX, clientY) {
   textarea.addEventListener('blur', finishTextOverlay);
   
   textarea.addEventListener('keydown', (event) => {
-    // Enter key (without shift) completes the text box
-    if (event.key === 'Enter' && !event.shiftKey) {
+    // Ctrl+Enter completes the text box
+    if (event.key === 'Enter' && event.ctrlKey) {
       event.preventDefault();
       textarea.blur(); // Triggers blur/finishTextOverlay
     }

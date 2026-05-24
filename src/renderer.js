@@ -188,7 +188,12 @@ function drawStroke(stroke) {
       ctx.font = `500 ${stroke.size * 3}px var(--font-family-ui)`;
       ctx.fillStyle = stroke.color;
       ctx.textBaseline = 'top';
-      ctx.fillText(stroke.text, pts[0].x, pts[0].y);
+      const lines = stroke.text.split('\n');
+      const fontSize = stroke.size * 3;
+      const lineHeight = fontSize * 1.2;
+      lines.forEach((line, index) => {
+        ctx.fillText(line, pts[0].x, pts[0].y + index * lineHeight);
+      });
     }
   }
   else if (stroke.tool === 'image') {
