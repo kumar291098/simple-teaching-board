@@ -63,6 +63,54 @@ export function draw(activeStroke = null) {
     drawStroke(activeStroke);
   }
   
+  // 5. Draw Selection Bounding Box (if select tool is active and an item is selected)
+  if (state.selectedStroke && state.currentTool === 'select') {
+    drawSelectionBox(state.selectedStroke);
+  }
+  
+  ctx.restore();
+}
+
+// Draw selection dashed box and resize handle circle
+function drawSelectionBox(stroke) {
+  if (!stroke.points || stroke.points.length < 2) return;
+  
+  ctx.save();
+  
+  const x1 = stroke.points[0].x;
+  const y1 = stroke.points[0].y;
+  const x2 = stroke.points[1].x;
+  const y2 = stroke.points[1].y;
+  
+  const minX = Math.min(x1, x2);
+  const maxX = Math.max(x1, x2);
+  const minY = Math.min(y1, y2);
+  const maxY = Math.max(y1, y2);
+  
+  const w = maxX - minX;
+  const h = maxY - minY;
+  
+  // Outlined dashed box
+  ctx.strokeStyle = state.theme === 'light' ? '#2563eb' : '#64b5f6';
+  ctx.lineWidth = 1.5 / camera.zoom;
+  ctx.setLineDash([4 / camera.zoom, 4 / camera.zoom]);
+  
+  ctx.beginPath();
+  ctx.rect(minX, minY, w, h);
+  ctx.stroke();
+  
+  // Circular bottom-right corner handle
+  ctx.fillStyle = state.theme === 'light' ? '#2563eb' : '#64b5f6';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1 / camera.zoom;
+  ctx.setLineDash([]);
+  
+  const handleRadius = 6 / camera.zoom;
+  ctx.beginPath();
+  ctx.arc(maxX, maxY, handleRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  
   ctx.restore();
 }
 

@@ -2,8 +2,8 @@
 // APPLICATION CORE ENTRY POINT & ROUTER
 // ----------------------------------------------------
 import { state, themesConfig } from './config.js';
-import { camera, screenToWorld, pan, zoomAt, resetView } from './camera.js';
-import { initHistory, addStroke, registerHistoryListener, undo, redo, clearHistory } from './history.js';
+import { camera, screenToWorld, worldToScreen, pan, zoomAt, resetView } from './camera.js';
+import { initHistory, addStroke, removeStroke, registerHistoryListener, undo, redo, clearHistory, strokes, saveHistoryState } from './history.js';
 import { setupTheme, updateGridStyle } from './theme.js';
 import { initRenderer, draw } from './renderer.js';
 import { setupShortcuts } from './shortcuts.js';
@@ -174,6 +174,67 @@ function setupDOMListeners() {
       shortcutsOverlay.classList.remove('active');
     }
   });
+
+  // Clipboard copy listener
+  window.addEventListener('copy', (e) => {
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+    
+    if (state.currentTool === 'select' && state.selectedStroke) {
+      e.preventDefault();
+      state.clipboard = JSON.parse(JSON.stringify(state.selectedStroke));
+    }
+  });
+  
+  // Clipboard paste listener
+  window.addEventListener('paste', (e) => {
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+    
+    // Check if pasting image files from OS
+    const files = e.clipboardData?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file && file.type.startsWith('image/')) {
+        e.preventDefault();
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          loadAndPlaceImage(event.target.result);
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+    }
+    
+    // Check if pasting copied strokes
+    if (state.currentTool === 'select' && state.clipboard) {
+      e.preventDefault();
+      const clone = JSON.parse(JSON.stringify(state.clipboard));
+      
+      // Shift points by a small offset
+      const offset = 20;
+      clone.points[0].x += offset;
+      clone.points[0].y += offset;
+      clone.points[1].x += offset;
+      clone.points[1].y += offset;
+      
+      addStroke(clone);
+      state.selectedStroke = clone;
+      draw();
+    }
+  });
+
+  // Delete / Backspace keys to delete selected element
+  window.addEventListener('keydown', (e) => {
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+    
+    if (state.currentTool === 'select' && state.selectedStroke) {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        removeStroke(state.selectedStroke);
+        state.selectedStroke = null;
+        draw();
+      }
+    }
+  });
 }
 
 // ----------------------------------------------------
@@ -197,11 +258,86 @@ function handlePointerDown(e) {
     createTextOverlay(e.clientX, e.clientY);
     return;
   }
+
+  const worldPos = screenToWorld(screenX, screenY);
+
+  // Select Tool handler
+  if (state.currentTool === 'select') {
+    // 1. Check if clicked on the bottom-right resize handle of the currently selected element
+    if (state.selectedStroke) {
+      const s = state.selectedStroke;
+      const x1 = s.points[0].x;
+      const y1 = s.points[0].y;
+      const x2 = s.points[1].x;
+      const y2 = s.points[1].y;
+      
+      const maxX = Math.max(x1, x2);
+      const maxY = Math.max(y1, y2);
+      
+      const handleScreen = worldToScreen(maxX, maxY);
+      const dx = screenX - handleScreen.x;
+      const dy = screenY - handleScreen.y;
+      const distance = Math.sqrt(dx*dx + dy*dy);
+      
+      if (distance < 12) { // 12px radius click zone
+        state.isResizingElement = true;
+        state.resizeStartWorld = worldPos;
+        state.resizeStartPoints = s.points.map(p => ({ x: p.x, y: p.y }));
+        state.resizeStartSize = s.size;
+        paintCanvas.setPointerCapture(e.pointerId);
+        return;
+      }
+    }
+
+    // 2. Perform hit testing on all strokes (last added checked first)
+    let found = null;
+    for (let i = strokes.length - 1; i >= 0; i--) {
+      const s = strokes[i];
+      if (s.tool === 'text' || s.tool === 'image') {
+        const x1 = s.points[0].x;
+        const y1 = s.points[0].y;
+        const x2 = s.points[1].x;
+        const y2 = s.points[1].y;
+        const minX = Math.min(x1, x2);
+        const maxX = Math.max(x1, x2);
+        const minY = Math.min(y1, y2);
+        const maxY = Math.max(y1, y2);
+        
+        if (worldPos.x >= minX && worldPos.x <= maxX && worldPos.y >= minY && worldPos.y <= maxY) {
+          found = s;
+          break;
+        }
+      }
+    }
+
+    if (found) {
+      state.selectedStroke = found;
+      state.isDraggingElement = true;
+      state.dragStartWorld = worldPos;
+      state.dragStartPoints = found.points.map(p => ({ x: p.x, y: p.y }));
+
+      // Double-click to bring to front
+      const now = Date.now();
+      if (state.lastClickTime && (now - state.lastClickTime < 250) && state.lastClickedStroke === found) {
+        const idx = strokes.indexOf(found);
+        if (idx !== -1) {
+          strokes.splice(idx, 1);
+          strokes.push(found);
+          saveHistoryState();
+        }
+      }
+      state.lastClickTime = now;
+      state.lastClickedStroke = found;
+    } else {
+      state.selectedStroke = null;
+    }
+
+    draw();
+    paintCanvas.setPointerCapture(e.pointerId);
+    return;
+  }
   
   state.isDrawing = true;
-  
-  // Translate pointer down to world space coordinates
-  const worldPos = screenToWorld(screenX, screenY);
   
   // Start new active vector stroke
   activeStroke = {
@@ -237,14 +373,51 @@ function handlePointerMove(e) {
     draw();
     return;
   }
-  
-  if (!state.isDrawing || !activeStroke) return;
-  
+
   const rect = paintCanvas.getBoundingClientRect();
   const screenX = e.clientX - rect.left;
   const screenY = e.clientY - rect.top;
-  
   const worldPos = screenToWorld(screenX, screenY);
+
+  // Drag selected element to move
+  if (state.isDraggingElement && state.selectedStroke) {
+    const dx = worldPos.x - state.dragStartWorld.x;
+    const dy = worldPos.y - state.dragStartWorld.y;
+    const s = state.selectedStroke;
+    s.points[0].x = state.dragStartPoints[0].x + dx;
+    s.points[0].y = state.dragStartPoints[0].y + dy;
+    s.points[1].x = state.dragStartPoints[1].x + dx;
+    s.points[1].y = state.dragStartPoints[1].y + dy;
+    draw();
+    return;
+  }
+
+  // Drag handle to resize selected element
+  if (state.isResizingElement && state.selectedStroke) {
+    const s = state.selectedStroke;
+    if (s.tool === 'image') {
+      s.points[1].x = worldPos.x;
+      s.points[1].y = worldPos.y;
+    } else if (s.tool === 'text') {
+      const originalHeight = Math.abs(state.resizeStartPoints[1].y - state.resizeStartPoints[0].y);
+      const newHeight = Math.abs(state.resizeStartPoints[1].y - worldPos.y);
+      const scale = originalHeight > 0 ? newHeight / originalHeight : 1;
+      s.size = Math.max(2, Math.round(state.resizeStartSize * scale));
+
+      const fontSize = s.size * 3;
+      const tempCtx = paintCanvas.getContext('2d');
+      tempCtx.font = `bold ${fontSize}px var(--font-family-ui)`;
+      const w = tempCtx.measureText(s.text).width;
+
+      s.points[0].y = worldPos.y;
+      s.points[1].y = worldPos.y - fontSize;
+      s.points[1].x = s.points[0].x + w;
+    }
+    draw();
+    return;
+  }
+  
+  if (!state.isDrawing || !activeStroke) return;
   
   if (activeStroke.tool === 'pen' || activeStroke.tool === 'eraser') {
     activeStroke.points.push(worldPos);
@@ -260,6 +433,15 @@ function handlePointerUp(e) {
   if (state.isPanning) {
     state.isPanning = false;
     paintCanvas.releasePointerCapture(e.pointerId);
+    return;
+  }
+
+  if (state.isDraggingElement || state.isResizingElement) {
+    state.isDraggingElement = false;
+    state.isResizingElement = false;
+    paintCanvas.releasePointerCapture(e.pointerId);
+    saveHistoryState();
+    draw();
     return;
   }
   
@@ -317,6 +499,10 @@ function updateZoomDisplay() {
 // UI AUXILIARY HELPERS
 // ----------------------------------------------------
 function switchTool(toolName) {
+  if (toolName !== 'select') {
+    state.selectedStroke = null;
+    draw();
+  }
   state.currentTool = toolName;
   
   // Update active state in toolbar buttons
@@ -331,6 +517,9 @@ function switchTool(toolName) {
     eraserCursor.style.display = 'none';
   } else if (toolName === 'text') {
     paintCanvas.classList.add('drawing-active-text');
+    eraserCursor.style.display = 'none';
+  } else if (toolName === 'select') {
+    paintCanvas.classList.add('drawing-active-select');
     eraserCursor.style.display = 'none';
   } else if (toolName === 'eraser') {
     paintCanvas.classList.add('drawing-active-pen');
@@ -425,10 +614,18 @@ function createTextOverlay(clientX, clientY) {
       const y = clientY - rect.top;
       const worldPos = screenToWorld(x, y);
       
+      const fontSize = state.currentSize * 3;
+      const tempCtx = paintCanvas.getContext('2d');
+      tempCtx.font = `bold ${fontSize}px var(--font-family-ui)`;
+      const w = tempCtx.measureText(text).width;
+      
       addStroke({
         tool: 'text',
         text: text,
-        points: [worldPos],
+        points: [
+          worldPos,
+          { x: worldPos.x + w, y: worldPos.y - fontSize }
+        ],
         color: state.currentColor,
         size: state.currentSize
       });

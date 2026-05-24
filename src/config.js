@@ -3,13 +3,15 @@
 // ----------------------------------------------------
 
 export const state = {
-  currentTool: 'pen', // 'pen', 'pan', 'eraser', 'line', 'rectangle', 'circle', 'text', 'image'
+  currentTool: 'pen', // 'pen', 'select', 'pan', 'eraser', 'line', 'rectangle', 'circle', 'text', 'image'
   currentColor: '#ffffff',
   currentSize: 5,
   isDrawing: false,
   isPanning: false,
   gridEnabled: false,
   theme: 'green', // 'green', 'dark', 'light'
+  selectedStroke: null,
+  clipboard: null,
 };
 
 // Theme configurations defining backgrounds, grid lines, and soft chalky/bold marker presets

@@ -70,6 +70,15 @@ export function addStroke(stroke) {
   saveHistoryState();
 }
 
+// Remove a stroke and save state
+export function removeStroke(stroke) {
+  const index = strokes.indexOf(stroke);
+  if (index !== -1) {
+    strokes.splice(index, 1);
+    saveHistoryState();
+  }
+}
+
 // Replace the active stroke list (e.g. during imports/restores)
 export function setStrokes(newStrokes) {
   strokes = newStrokes;

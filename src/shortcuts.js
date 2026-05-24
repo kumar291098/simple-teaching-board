@@ -71,6 +71,9 @@ export function setupShortcuts(onToolChange, onThemeCycle, onGridToggle, trigger
       case 'p':
         onToolChange('pen');
         break;
+      case 'v':
+        onToolChange('select');
+        break;
       case 'h':
         onToolChange('pan');
         break;
@@ -104,6 +107,9 @@ export function setupShortcuts(onToolChange, onThemeCycle, onGridToggle, trigger
         break;
       case 'delete':
       case 'backspace':
+        if (state.currentTool === 'select' && state.selectedStroke) {
+          break;
+        }
         if (confirm('Clear the active infinite teaching board?')) {
           clearHistory();
           triggerRedraw();

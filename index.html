@@ -71,6 +71,14 @@
           <span class="tooltip">Pen</span>
         </button>
 
+        <button class="tool-btn" id="tool-select" data-tool="select" title="Select & Move (V)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 3 10 21 13 13 21 10 3 3"></polyline>
+            <line x1="13" y1="13" x2="19" y2="19"></line>
+          </svg>
+          <span class="tooltip">Select & Move</span>
+        </button>
+
         <button class="tool-btn" id="tool-eraser" data-tool="eraser" title="Eraser Tool (E)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 20H7L3 16c-1.5-1.5-1.5-3.5 0-5l8.5-8.5c1.5-1.5 3.5-1.5 5 0l4 4c1.5 1.5 1.5 3.5 0 5L12 20"></path>
@@ -318,6 +326,7 @@
         <div class="shortcuts-modal-body">
           <ul class="modal-shortcuts-list">
             <li><kbd>P</kbd> <span>Pen Tool</span></li>
+            <li><kbd>V</kbd> <span>Select & Move</span></li>
             <li><kbd>H</kbd> <span>Pan Board</span></li>
             <li><kbd>E</kbd> <span>Eraser</span></li>
             <li><kbd>T</kbd> <span>Text Tool</span></li>
@@ -329,8 +338,11 @@
             <li><kbd>B</kbd> <span>Cycle Background</span></li>
             <li><kbd>Ctrl + Z</kbd> <span>Undo Stroke</span></li>
             <li><kbd>Ctrl + Y</kbd> <span>Redo Stroke</span></li>
+            <li><kbd>Ctrl + C</kbd> <span>Copy Selection</span></li>
+            <li><kbd>Ctrl + V</kbd> <span>Paste Selection/Image</span></li>
+            <li><kbd>Delete / Backspace</kbd> <span>Delete Selected Item</span></li>
             <li><kbd>Ctrl + S</kbd> <span>Save as PNG</span></li>
-            <li><kbd>Delete</kbd> <span>Clear Canvas</span></li>
+            <li><kbd>Delete</kbd> <span>Clear Canvas (no selection)</span></li>
             <li><kbd>?</kbd> <span>Toggle this help menu</span></li>
           </ul>
         </div>
