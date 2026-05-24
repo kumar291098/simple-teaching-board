@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodingHelp - Digital Teaching Board</title>
+  <meta name="description" content="A beautiful, premium digital blackboard and whiteboard for teaching, sketching, and remote instruction.">
+  
+  <!-- SEO Meta Tags -->
+  <meta property="og:title" content="CodingHelp - Digital Teaching Board">
+  <meta property="og:description" content="An elegant, distraction-free blackboard and whiteboard app with fluid drawing, grids, and shape tools.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/logo.png">
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="apple-touch-icon" href="/logo.png">
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- Google Fonts: Outfit for UI, Playfair for branding -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;1,400&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="board-theme-green">
+  <!-- Splash Screen -->
+  <div id="splash" class="splash-screen">
+    <div class="splash-content">
+      <div class="splash-logo">
+        <img src="/logo.png" alt="CodingHelp Logo" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+      </div>
+      <h1 class="splash-title">CodingHelp</h1>
+      <p class="splash-subtitle">Your Digital Teaching Canvas</p>
+      <div class="splash-loader">
+        <div class="loader-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Workspace -->
+  <main class="workspace">
+    <!-- Active drawing canvas -->
+    <canvas id="paintCanvas"></canvas>
+    
+    <!-- Floating Toolbar (Horizontal Stack at Top) -->
+    <div class="floating-toolbar top-toolbar" id="mainToolbar">
+      <!-- Left Toggle Collapse Button -->
+      <button class="tool-btn toggle-toolbar-btn" id="btn-toggle-toolbar-left" title="Collapse Toolbar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar-chevron">
+          <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+      </button>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- Toolbar Brand Logo -->
+      <div class="toolbar-brand" title="CodingHelp">
+        <img src="/logo.png" alt="CodingHelp Logo" class="brand-logo">
+        <span class="brand-text">CodingHelp</span>
+      </div>
+      
+      <div class="toolbar-divider"></div>
+      
+      <!-- Primary Drawing Tools -->
+      <div class="tool-group">
+        <button class="tool-btn active" id="tool-pen" data-tool="pen" title="Pen Tool (P)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          <span class="tooltip">Pen</span>
+        </button>
+
+        <button class="tool-btn" id="tool-eraser" data-tool="eraser" title="Eraser Tool (E)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 20H7L3 16c-1.5-1.5-1.5-3.5 0-5l8.5-8.5c1.5-1.5 3.5-1.5 5 0l4 4c1.5 1.5 1.5 3.5 0 5L12 20"></path>
+            <line x1="6" y1="11" x2="13" y2="18"></line>
+          </svg>
+          <span class="tooltip">Eraser</span>
+        </button>
+
+        <button class="tool-btn" id="tool-text" data-tool="text" title="Text Tool (T)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 7 4 4 20 4 20 7"></polyline>
+            <line x1="9" y1="20" x2="15" y2="20"></line>
+            <line x1="12" y1="4" x2="12" y2="20"></line>
+          </svg>
+          <span class="tooltip">Text</span>
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- Geometry / Shapes Group -->
+      <div class="tool-group">
+        <button class="tool-btn" id="tool-line" data-tool="line" title="Straight Line (L)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="19" x2="19" y2="5"></line>
+          </svg>
+          <span class="tooltip">Line</span>
+        </button>
+
+        <button class="tool-btn" id="tool-rectangle" data-tool="rectangle" title="Rectangle (R)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          </svg>
+          <span class="tooltip">Rectangle</span>
+        </button>
+
+        <button class="tool-btn" id="tool-circle" data-tool="circle" title="Circle (C)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+          </svg>
+          <span class="tooltip">Circle</span>
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- Zoom Controls (Horizontal) -->
+      <div class="tool-group zoom-group-horizontal">
+        <button class="tool-btn" id="btn-zoom-in" title="Zoom In (Ctrl+Plus)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span class="tooltip">Zoom In</span>
+        </button>
+        
+        <span class="zoom-value" id="zoomLevelText" title="Double click to Reset Zoom">100%</span>
+        
+        <button class="tool-btn" id="btn-zoom-out" title="Zoom Out (Ctrl+Minus)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span class="tooltip">Zoom Out</span>
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- Panning and Images Group -->
+      <div class="tool-group">
+        <button class="tool-btn" id="tool-pan" data-tool="pan" title="Pan Board (H or hold Spacebar)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v5"></path>
+            <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v6"></path>
+            <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8.5"></path>
+            <path d="M6 14v-1.5a1.5 1.5 0 0 0-3 0V18a6 6 0 0 0 6 6h4a8 8 0 0 0 8-8v-3a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2"></path>
+          </svg>
+          <span class="tooltip">Pan & Scroll</span>
+        </button>
+
+        <button class="tool-btn" id="tool-image" title="Insert Image (I)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          <span class="tooltip">Insert Image</span>
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- Board Controls (Grid, Styles) -->
+      <div class="tool-group">
+        <button class="tool-btn" id="btn-grid" title="Toggle Grid (G)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+            <line x1="15" y1="3" x2="15" y2="21"></line>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="3" y1="15" x2="21" y2="15"></line>
+          </svg>
+          <span class="tooltip">Grid Lines</span>
+        </button>
+
+        <button class="tool-btn" id="btn-theme" title="Switch Board Background (B)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+            <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"></path>
+          </svg>
+          <span class="tooltip">Board Style</span>
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- Undo / Redo / Utility Controls -->
+      <div class="tool-group">
+        <button class="tool-btn" id="btn-undo" disabled title="Undo (Ctrl+Z)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 14 4 9 9 4"></polyline>
+            <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+          </svg>
+          <span class="tooltip">Undo</span>
+        </button>
+
+        <button class="tool-btn" id="btn-redo" disabled title="Redo (Ctrl+Y)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 14 20 9 15 4"></polyline>
+            <path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>
+          </svg>
+          <span class="tooltip">Redo</span>
+        </button>
+
+        <button class="tool-btn danger-hover" id="btn-clear" title="Clear Canvas (Del)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+          <span class="tooltip">Clear Board</span>
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- Export / Share -->
+      <div class="tool-group">
+        <button class="tool-btn success-hover" id="btn-download" title="Export Canvas as Image (Ctrl+S)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span class="tooltip">Save Image</span>
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <!-- Right Toggle Collapse Button -->
+      <button class="tool-btn toggle-toolbar-btn" id="btn-toggle-toolbar-right" title="Collapse Toolbar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar-chevron">
+          <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Bottom Settings Bar (Horizontal Stack at Bottom) -->
+    <div class="bottom-settings-bar" id="sidebar">
+      <!-- Left Toggle Collapse Button -->
+      <button class="tool-btn toggle-settings-btn" id="btn-toggle-settings-left" title="Collapse Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-settings-chevron">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+
+      <div class="settings-divider"></div>
+
+      <div class="settings-content-horizontal">
+        <!-- Size Slider -->
+        <div class="setting-item-horizontal">
+          <span class="setting-label">Brush Size</span>
+          <input type="range" id="brushSize" min="1" max="80" value="5" class="custom-slider">
+          <span id="brushSizeVal" class="size-val">5px</span>
+          <div class="brush-preview-dot-container-horizontal">
+            <div class="brush-preview-dot-horizontal" id="brushPreviewDot"></div>
+          </div>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <!-- Chalk Palette Selection -->
+        <div class="palette-container-horizontal">
+          <div class="color-presets" id="colorPresets">
+            <!-- Preset items will be dynamically generated by JS -->
+          </div>
+          
+          <div class="custom-color-container-horizontal">
+            <div class="custom-color-preview-wrapper">
+              <input type="color" id="customColorPicker" value="#ffffff">
+              <label for="customColorPicker" class="custom-color-label-horizontal">
+                <span class="custom-color-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 21a9 9 0 1 1 0-18c4.97 0 9 3.58 9 8a8.94 8.94 0 0 1-2.29 5.86 1 1 0 0 1-1.37.1l-1.36-1.12a1 1 0 0 0-1.28-.1l-1.25.96a1 1 0 0 1-1.2.06L12 17H8a1 1 0 0 1-1-1v-2a1 1 0 0 1 .53-.88l1.4-1a1 1 0 0 0 .07-1.63L8 10a1 1 0 0 1-.5-1V7a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v2a1 1 0 0 1-.5 1l-.97.63a1 1 0 0 0-.07 1.63l1.4 1A1 1 0 0 1 18 14v1a3 3 0 0 0 3-3V7.97"></path>
+                  </svg>
+                </span>
+                <span>Custom Chalk</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-divider"></div>
+
+        <!-- Shortcuts trigger button -->
+        <button class="tool-btn" id="btn-shortcuts" title="Keyboard Shortcuts (Key: ?)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span class="tooltip">Key Shortcuts</span>
+        </button>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <!-- Right Toggle Collapse Button -->
+      <button class="tool-btn toggle-settings-btn" id="btn-toggle-settings-right" title="Collapse Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-settings-chevron">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal Overlay -->
+    <div id="shortcutsOverlay" class="shortcuts-overlay">
+      <div class="shortcuts-modal">
+        <div class="shortcuts-modal-header">
+          <h3>Keyboard Shortcuts</h3>
+          <button id="btn-close-shortcuts" class="close-btn" title="Close ShortcutsModal">&times;</button>
+        </div>
+        <div class="shortcuts-modal-body">
+          <ul class="modal-shortcuts-list">
+            <li><kbd>P</kbd> <span>Pen Tool</span></li>
+            <li><kbd>H</kbd> <span>Pan Board</span></li>
+            <li><kbd>E</kbd> <span>Eraser</span></li>
+            <li><kbd>T</kbd> <span>Text Tool</span></li>
+            <li><kbd>I</kbd> <span>Insert Image</span></li>
+            <li><kbd>L</kbd> <span>Line Shape</span></li>
+            <li><kbd>R</kbd> <span>Rectangle Shape</span></li>
+            <li><kbd>C</kbd> <span>Circle Shape</span></li>
+            <li><kbd>G</kbd> <span>Toggle Grid</span></li>
+            <li><kbd>B</kbd> <span>Cycle Background</span></li>
+            <li><kbd>Ctrl + Z</kbd> <span>Undo Stroke</span></li>
+            <li><kbd>Ctrl + Y</kbd> <span>Redo Stroke</span></li>
+            <li><kbd>Ctrl + S</kbd> <span>Save as PNG</span></li>
+            <li><kbd>Delete</kbd> <span>Clear Canvas</span></li>
+            <li><kbd>?</kbd> <span>Toggle this help menu</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Eraser Ring Cursor -->
+    <div id="eraserCursor" class="custom-eraser-cursor"></div>
+  </main>
+
+  <!-- Hidden file selector input for Images -->
+  <input type="file" id="imageInput" accept="image/*" style="display: none;">
+
+  <!-- Load Modular JS from /src/main.js -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "simple-teaching-board",
+  "version": "1.0.0",
+  "description": "A beautiful, premium digital teaching board (blackboard/whiteboard) application.",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}
