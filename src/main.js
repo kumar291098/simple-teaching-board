@@ -182,6 +182,10 @@ function setupDOMListeners() {
     if (state.currentTool === 'select' && state.selectedStroke) {
       e.preventDefault();
       state.clipboard = JSON.parse(JSON.stringify(state.selectedStroke));
+      // Write plain text representation to OS clipboard if copying a text stroke
+      if (state.selectedStroke.tool === 'text') {
+        e.clipboardData.setData('text/plain', state.selectedStroke.text);
+      }
     }
   });
   
@@ -189,7 +193,7 @@ function setupDOMListeners() {
   window.addEventListener('paste', (e) => {
     if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
     
-    // Check if pasting image files from OS
+    // 1. Check if pasting image files from OS
     const files = e.clipboardData?.files;
     if (files && files.length > 0) {
       const file = files[0];
@@ -203,8 +207,54 @@ function setupDOMListeners() {
         return;
       }
     }
+
+    // 2. Check if pasting plain text from OS clipboard
+    const pastedText = e.clipboardData?.getData('text');
+    const isNewOSText = pastedText && (!state.clipboard || state.clipboard.tool !== 'text' || state.clipboard.text !== pastedText);
     
-    // Check if pasting copied strokes
+    if (isNewOSText) {
+      e.preventDefault();
+      
+      const rect = paintCanvas.getBoundingClientRect();
+      const centerX = (rect.width / 2 - camera.x) / camera.zoom;
+      const centerY = (rect.height / 2 - camera.y) / camera.zoom;
+      
+      const fontSize = state.currentSize * 3;
+      const tempCtx = paintCanvas.getContext('2d');
+      tempCtx.font = `bold ${fontSize}px var(--font-family-ui)`;
+      
+      const lines = pastedText.split('\n');
+      let maxW = 0;
+      lines.forEach(line => {
+        const w = tempCtx.measureText(line).width;
+        if (w > maxW) maxW = w;
+      });
+      const totalH = lines.length * (fontSize * 1.2);
+      
+      const x1 = centerX - maxW / 2;
+      const y1 = centerY - totalH / 2;
+      const x2 = x1 + maxW;
+      const y2 = y1 + totalH;
+      
+      const newStroke = {
+        tool: 'text',
+        text: pastedText,
+        points: [
+          { x: x1, y: y1 },
+          { x: x2, y: y2 }
+        ],
+        color: state.currentColor,
+        size: state.currentSize
+      };
+      
+      addStroke(newStroke);
+      state.selectedStroke = newStroke;
+      switchTool('select');
+      draw();
+      return;
+    }
+    
+    // 3. Check if pasting copied internal strokes
     if (state.currentTool === 'select' && state.clipboard) {
       e.preventDefault();
       const clone = JSON.parse(JSON.stringify(state.clipboard));
