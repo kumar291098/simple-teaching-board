@@ -1,6 +1,6 @@
 # CodingHelp - Digital Teaching Board
 
-A premium, high-performance, distraction-free digital blackboard and whiteboard application featuring an **Infinite Vector Canvas** with rich text support, image overlays, shape layers, dynamic grid systems, and high-resolution exports.
+A premium, high-performance, distraction-free digital blackboard and whiteboard application featuring an **Infinite Vector Canvas** with rich multiline text support, image overlays, shape layers, dynamic grid systems, high-resolution PNG exports, and advanced interactive capabilities.
 
 ---
 
@@ -29,7 +29,7 @@ The application behaves as a **Single Page Application (SPA)** utilizing a unidi
 
 ```mermaid
 graph TD
-    User["User Interactions (Pointer, Scroll, Drag-and-Drop)"]
+    User["User Interactions (Pointer, Scroll, Drag-and-Drop, OS Clipboard)"]
     Main["DOM Interaction Handler (src/main.js)"]
     Shortcuts["Keyboard Shortcut Router (src/shortcuts.js)"]
     Camera["Viewport Transformation Matrix (src/camera.js)"]
@@ -38,10 +38,10 @@ graph TD
     Export["PNG Asset Compiler (src/export.js)"]
     CanvasView["HTML5 Canvas Viewport (Screen Space)"]
 
-    User -->|Gestures/Clicks| Main
+    User -->|Gestures/Clicks/Paste| Main
     User -->|Hotkeys| Shortcuts
     Main -->|Pans/Zooms| Camera
-    Main -->|Vector Strokes| History
+    Main -->|Vector Strokes / Mutations| History
     Shortcuts -->|Temporary Panning| Main
     Shortcuts -->|Undo/Redo Actions| History
     Camera -->|Coordinate Matrix| Renderer
@@ -53,10 +53,10 @@ graph TD
 
 ### High-Level Subsystems
 
-1. **Input Controller**: Receives pointer captures (support for mouse, stylus, touch) and keyboard keys to decide active actions (drawing, zooming, panning, text entry).
+1. **Input Controller**: Receives pointer captures (support for mouse, stylus, touch) and keyboard keys to decide active actions (drawing, zooming, panning, text entry, select/move, and resize).
 2. **Coordinate Transformer**: Converts device-independent screen pixels to virtual infinite-grid coordinates depending on zoom level and panning offsets.
-3. **State Container**: Holds current selection data (chalk color, brush size, active tool) and historical records of drawn items.
-4. **Drawing Pipeline**: A high-efficiency render engine that cleans, applies scaling matrices, constructs grids, and renders vector paths.
+3. **State Container**: Holds current selection data (chalk color, brush size, active tool, selected stroke, clipboard stroke) and historical records of drawn items.
+4. **Drawing Pipeline**: A high-efficiency render engine that cleans, applies scaling matrices, constructs grids, renders vector paths, and overlays active selection bounding boxes.
 5. **Asset Exporter**: Translates vector layers into static raster drawings on a high-definition offline Canvas context for direct device download.
 
 ---
@@ -70,11 +70,12 @@ All actions on the board are represented as vector stroke structures, enabling l
 ```javascript
 // Stroke Structure Schema
 {
-  tool: 'pen' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'text' | 'image',
+  tool: 'pen' | 'select' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'text' | 'image',
   color: '#ffffff' | 'transparent', // CSS color swatch string
-  size: Number, // Nominal brush width in pixels
+  size: Number, // Nominal brush width or font scale factor
   points: [
-    { x: Number, y: Number } // Array of coordinates in World Space (relative to center 0,0)
+    { x: Number, y: Number }, // top-left coordinate (or baseline for text)
+    { x: Number, y: Number }  // bottom-right coordinate (or top-right for text)
   ],
   text: String, // Optional: Holds message content if tool === 'text'
   dataURL: String // Optional: Holds base64 image data if tool === 'image'
@@ -102,6 +103,7 @@ classDiagram
         +undoStack: Array
         +redoStack: Array
         +addStroke(stroke)
+        +removeStroke(stroke)
         +undo()
         +redo()
         +clearHistory()
@@ -113,6 +115,7 @@ classDiagram
         +draw(activeStroke)
         +drawGrid(ctx)
         +drawStrokes(ctx, list)
+        +drawSelectionBox(stroke)
     }
     class Export {
         +exportCanvasAsImage()
@@ -125,11 +128,12 @@ classDiagram
         +handlePointerDown()
         +handlePointerMove()
         +handlePointerUp()
+        +createTextOverlay()
     }
 
     Main --> Config : mutates state
     Main --> Camera : calls conversions
-    Main --> History : writes strokes
+    Main --> History : writes/removes strokes
     Main --> Renderer : triggers redraws
     Shortcuts --> History : triggers undo/redo
     Shortcuts --> Main : switches tools
@@ -157,21 +161,58 @@ When a user interacts with the canvas, coordinates must flow through coordinate 
 
 ---
 
+## 🎨 Interactive Engine Specifications
+
+### 1. Element Selection & Translation (Move)
+- When the Selection Tool is active (`V`), pointer down triggers a hit-test against all text and image strokes in reverse order (top-most elements first).
+- A matching element is set as `state.selectedStroke`. The renderer wraps it in a dashed bounding box with a resize handle.
+- Dragging inside the box translates both points:
+  $$\Delta x = \text{currentWorldX} - \text{startWorldX}$$
+  $$\Delta y = \text{currentWorldY} - \text{startWorldY}$$
+  $$P_0' = P_{0,\text{start}} + (\Delta x, \Delta y)$$
+  $$P_1' = P_{1,\text{start}} + (\Delta x, \Delta y)$$
+
+### 2. Proportional Scaling (Resize)
+- Dragging the bottom-right handle triggers resize mode.
+- **Images**: Freely adjusts $P_1$ (bottom-right coordinate) to the cursor world position.
+- **Text**: Resizes relative to the top-left anchor $P_0$. The scale factor is determined by height changes:
+  $$\text{scale} = \frac{|y_{\text{cursor}} - y_{0,\text{start}}|}{|y_{1,\text{start}} - y_{0,\text{start}}|}$$
+  $$\text{size}' = \max(2, \text{round}(\text{size}_{\text{start}} \times \text{scale}))$$
+- Font metrics are re-measured, recalculating width ($w$) and combined height ($h$). Bounding coordinates are updated:
+  $$P_1.x = P_0.x + w$$
+  $$P_1.y = P_0.y + h$$
+
+### 3. Multiline Formatting
+- Text strings containing `\n` (newlines) are split and drawn line-by-line using a line height multiplier of $1.2 \times \text{fontSize}$.
+- Textarea inputs expand dynamically as users type. Pressing `Enter` adds a newline, and `Ctrl + Enter` submits.
+
+### 4. Advanced Clipboard Integration
+- **Copy/Paste (`Ctrl+C` / `Ctrl+V`)**: Copies the selected canvas stroke. Pasting duplicates it offset by $+20$ world units.
+- **OS Screenshot/File Paste**: Pasting image files from the operating system clipboard immediately decodes, centers, and selects them on the canvas.
+- **OS Text Paste**: Pasting raw code blocks or text snippets immediately formats them as multiline text blocks centered in the active view, activates the Selection Tool, and selects the pasted block.
+- **Deletion**: Pressing `Delete` or `Backspace` deletes selected elements immediately.
+
+### 5. Double-Collapse Sidebar Architecture
+- **Off-Screen Collapsing**: Top and bottom panels slide completely off-screen by translating $68\text{px}$ (desktop) or $60\text{px}$ (mobile).
+- **Sticky Chevron Toggles**: The collapse chevrons counter-translate by the same amount, remaining pinned to the screen margin with a separate glassmorphism border and box-shadow. They transition smoothly using CSS transforms.
+
+---
+
 ## 🎨 Design Patterns Used
 
 1. **Memento Pattern (Undo/Redo System)**:
    - Configured in [src/history.js](file:///e:/JavaProject/simple-teaching-board/src/history.js).
-   - The system preserves snapshots of the vector canvas states. `undoStack` and `redoStack` store deep copies of stroke records, enabling 40-step rollback states.
+   - Deep copies of stroke arrays are stored in `undoStack` and `redoStack`. In-place transformations (moving, resizing) only commit state snapshots on `pointerup`.
 2. **Model-View-Controller (MVC) Design**:
-   - **Model**: Centralized state management in [src/config.js](file:///e:/JavaProject/simple-teaching-board/src/config.js) and the vector histories list in [src/history.js](file:///e:/JavaProject/simple-teaching-board/src/history.js).
-   - **View**: Controlled by layout sheets ([style.css](file:///e:/JavaProject/simple-teaching-board/style.css)) and the render pipelines ([src/renderer.js](file:///e:/JavaProject/simple-teaching-board/src/renderer.js)).
-   - **Controller**: Bound via user gestures in [src/main.js](file:///e:/JavaProject/simple-teaching-board/src/main.js) and keyboard listeners in [src/shortcuts.js](file:///e:/JavaProject/simple-teaching-board/src/shortcuts.js).
-3. **Facade / Modular Helper Pattern**:
-   - Coordinate conversions, vector calculations, and camera states are consolidated under [src/camera.js](file:///e:/JavaProject/simple-teaching-board/src/camera.js). The remainder of the application interacts with clean, simple coordinate transformation functions.
+   - **Model**: Centralized state management in [src/config.js](file:///e:/JavaProject/simple-teaching-board/src/config.js) and vector histories in [src/history.js](file:///e:/JavaProject/simple-teaching-board/src/history.js).
+   - **View**: Handled by [style.css](file:///e:/JavaProject/simple-teaching-board/style.css) and [src/renderer.js](file:///e:/JavaProject/simple-teaching-board/src/renderer.js).
+   - **Controller**: Managed in [src/main.js](file:///e:/JavaProject/simple-teaching-board/src/main.js) and keyboard routers in [src/shortcuts.js](file:///e:/JavaProject/simple-teaching-board/src/shortcuts.js).
+3. **Facade / Coordinate Transform Wrapper**:
+   - Complex scaling and translating matrices are enclosed under [src/camera.js](file:///e:/JavaProject/simple-teaching-board/src/camera.js), presenting clean conversions APIs.
 4. **Flyweight / Image Asset Caching**:
-   - Drawing base64 data URLs in a render loop causes latency due to image decoding. [src/renderer.js](file:///e:/JavaProject/simple-teaching-board/src/renderer.js) instantiates an internal `imageCache` map storing decoded `HTMLImageElement` references, avoiding repetitive file loading calls.
+   - Stores decoded `HTMLImageElement` references in an internal map to prevent canvas re-drawing lag.
 5. **State Observer Pattern**:
-   - The history repository notifies registered listeners when the undo/redo availability updates, automatically updating the state of the top toolbar action buttons.
+   - The history repository triggers callbacks to update the state of the top toolbar's Undo/Redo buttons.
 
 ---
 
