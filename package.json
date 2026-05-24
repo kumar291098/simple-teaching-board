@@ -2,13 +2,34 @@
   "name": "simple-teaching-board",
   "version": "1.0.0",
   "description": "A beautiful, premium digital teaching board (blackboard/whiteboard) application.",
+  "main": "electron-main.js",
   "scripts": {
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "app:start": "electron .",
+    "app:dist": "vite build && electron-builder"
   },
   "devDependencies": {
+    "electron": "^42.2.0",
+    "electron-builder": "^26.8.1",
     "vite": "^5.2.0"
+  },
+  "build": {
+    "appId": "com.codinghelp.teachingboard",
+    "productName": "CodingHelpBoard",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron-main.js",
+      "logo.png"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "logo.png"
+    }
   }
 }

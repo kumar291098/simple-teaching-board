@@ -1,6 +1,8 @@
 # CodingHelp - Digital Teaching Board
 
-A premium, high-performance, distraction-free digital blackboard and whiteboard application featuring an **Infinite Vector Canvas** with rich multiline text support, image overlays, shape layers, dynamic grid systems, high-resolution PNG exports, and advanced interactive capabilities.
+A premium, high-performance, distraction-free digital blackboard and whiteboard application featuring an **Infinite Vector Canvas** with rich multiline text support, image overlays, shape layers, dynamic grid systems, high-resolution PNG exports, and advanced interactive capabilities. 
+
+Available as a modern web app and a standalone, installable **Desktop Application**.
 
 ---
 
@@ -16,7 +18,10 @@ The application is built entirely on standard Web APIs and modern front-end tool
    - **Google Fonts**: Outfit (modern UI elements) and Playfair Display (brand typography).
 3. **Build Tooling & Development Server**:
    - **Vite v5**: High-speed local HMR (Hot Module Replacement) and optimized bundling wrapper.
-4. **Offline & Integration**:
+4. **Desktop Wrapper Shell**:
+   - **Electron v42**: Encapsulates the application inside a native chromium shell.
+   - **electron-builder**: Compiles the project into a local, standalone `.exe` installer (via NSIS compiler) for Windows.
+5. **Offline & Integration**:
    - **PWA Manifest**: Web application standard parameters (`manifest.json`) for desktop and mobile local installations.
 
 ---
@@ -25,11 +30,18 @@ The application is built entirely on standard Web APIs and modern front-end tool
 
 The application behaves as a **Single Page Application (SPA)** utilizing a unidirectional data flow model. Interactive coordinates mapped on the screen are translated into vector coordinates in World Space, committed to a state container, and redrawn dynamically.
 
+### Desktop Execution Model (Electron Shell)
+The desktop application packages all compiled assets and runs locally on the host machine. Instead of spinning up local servers that bind to network ports, Electron opens a native window and loads assets directly from the file system (`file://` protocol). This ensures:
+- **Zero Port Conflicts**: The application does not bind to `localhost:3000` or `localhost:8080`, leaving all network ports untouched and preventing conflicts with other software.
+- **100% Offline Capability**: All HTML, CSS, JS, and image assets are stored locally in the package. The application requires zero internet connection to launch and run.
+
 ### System Architecture Flow
 
 ```mermaid
 graph TD
     User["User Interactions (Pointer, Scroll, Drag-and-Drop, OS Clipboard)"]
+    Electron["Electron Main Process (electron-main.js)"]
+    RendererProcess["Electron Renderer (index.html + CSS/JS)"]
     Main["DOM Interaction Handler (src/main.js)"]
     Shortcuts["Keyboard Shortcut Router (src/shortcuts.js)"]
     Camera["Viewport Transformation Matrix (src/camera.js)"]
@@ -38,6 +50,8 @@ graph TD
     Export["PNG Asset Compiler (src/export.js)"]
     CanvasView["HTML5 Canvas Viewport (Screen Space)"]
 
+    User -->|Launch App| Electron
+    Electron -->|Create Window & Load File| RendererProcess
     User -->|Gestures/Clicks/Paste| Main
     User -->|Hotkeys| Shortcuts
     Main -->|Pans/Zooms| Camera
@@ -53,11 +67,12 @@ graph TD
 
 ### High-Level Subsystems
 
-1. **Input Controller**: Receives pointer captures (support for mouse, stylus, touch) and keyboard keys to decide active actions (drawing, zooming, panning, text entry, select/move, and resize).
-2. **Coordinate Transformer**: Converts device-independent screen pixels to virtual infinite-grid coordinates depending on zoom level and panning offsets.
-3. **State Container**: Holds current selection data (chalk color, brush size, active tool, selected stroke, clipboard stroke) and historical records of drawn items.
-4. **Drawing Pipeline**: A high-efficiency render engine that cleans, applies scaling matrices, constructs grids, renders vector paths, and overlays active selection bounding boxes.
-5. **Asset Exporter**: Translates vector layers into static raster drawings on a high-definition offline Canvas context for direct device download.
+1. **Electron Shell**: Native wrapper managing application initialization, system menus (hidden for a frameless chalkboard feel), window resizing, and local file resolutions.
+2. **Input Controller**: Receives pointer captures (support for mouse, stylus, touch) and keyboard keys to decide active actions (drawing, zooming, panning, text entry, select/move, and resize).
+3. **Coordinate Transformer**: Converts device-independent screen pixels to virtual infinite-grid coordinates depending on zoom level and panning offsets.
+4. **State Container**: Holds current selection data (chalk color, brush size, active tool, selected stroke, clipboard stroke) and historical records of drawn items.
+5. **Drawing Pipeline**: A high-efficiency render engine that cleans, applies scaling matrices, constructs grids, renders vector paths, and overlays active selection bounding boxes.
+6. **Asset Exporter**: Translates vector layers into static raster drawings on a high-definition offline Canvas context for direct device download.
 
 ---
 
@@ -86,6 +101,10 @@ All actions on the board are represented as vector stroke structures, enabling l
 
 ```mermaid
 classDiagram
+    class ElectronMain {
+        +createWindow()
+        +appReady()
+    }
     class Config {
         +state: Object
         +themesConfig: Object
@@ -131,6 +150,7 @@ classDiagram
         +createTextOverlay()
     }
 
+    ElectronMain --> Renderer : loads dist/index.html
     Main --> Config : mutates state
     Main --> Camera : calls conversions
     Main --> History : writes/removes strokes
@@ -221,21 +241,20 @@ When a user interacts with the canvas, coordinates must flow through coordinate 
 ### Prerequisites
 Make sure you have [Node.js](https://nodejs.org/) installed.
 
-### 1. Install Dependencies
+### Running on Web
+1. **Install dependencies**: `npm install`
+2. **Run dev server**: `npm run dev`
+3. **Open browser**: [http://localhost:5173/](http://localhost:5173/)
+
+### Running on Desktop (Development Mode)
+Launch the application inside a local development Electron window:
 ```bash
-npm install
+npm run app:start
 ```
 
-### 2. Start the Development Server
+### Packaging Desktop Standalone Installer
+Compile the relative web assets and bundle them into a native Windows `.exe` installer (NSIS package):
 ```bash
-npm run dev
-# or
-npm start
+npm run app:dist
 ```
-Open [http://localhost:5173/](http://localhost:5173/) in your web browser.
-
-### 3. Build for Production
-```bash
-npm run build
-```
-This builds optimized production bundles inside the `dist/` folder.
+All packaged files will be output to the newly created `dist-electron/` folder.
