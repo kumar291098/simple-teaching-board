@@ -828,14 +828,30 @@ body.board-theme-light .color-swatch.active {
 
 /* Collapse Transitions */
 .floating-toolbar.collapsed {
-  transform: translateX(-50%) translateY(-44px) !important;
+  transform: translateX(-50%) translateY(-68px) !important;
+}
+
+.floating-toolbar.collapsed .toggle-toolbar-btn {
+  transform: translateY(68px);
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  box-shadow: 0 4px 12px var(--ui-shadow);
+  opacity: 0.9;
 }
 
 .bottom-settings-bar.collapsed {
-  transform: translateX(-50%) translateY(44px) !important;
+  transform: translateX(-50%) translateY(68px) !important;
 }
 
-.icon-toolbar-chevron {
+.bottom-settings-bar.collapsed .toggle-settings-btn {
+  transform: translateY(-68px);
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  box-shadow: 0 4px 12px var(--ui-shadow);
+  opacity: 0.9;
+}
+
+.icon-toolbar-chevron, .icon-settings-chevron {
   width: 16px;
   height: 16px;
   transition: transform var(--transition-medium);
@@ -845,12 +861,16 @@ body.board-theme-light .color-swatch.active {
   transform: rotate(180deg);
 }
 
-.toggle-toolbar-btn {
-  opacity: 0.5;
-  transition: opacity var(--transition-fast);
+.bottom-settings-bar.collapsed .icon-settings-chevron {
+  transform: rotate(180deg);
 }
 
-.toggle-toolbar-btn:hover {
+.toggle-toolbar-btn, .toggle-settings-btn {
+  opacity: 0.5;
+  transition: opacity var(--transition-fast), transform var(--transition-medium), background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.toggle-toolbar-btn:hover, .toggle-settings-btn:hover {
   opacity: 1;
   background-color: var(--ui-hover);
 }
@@ -925,11 +945,19 @@ body.board-theme-light .color-swatch.active {
   }
   
   .floating-toolbar.collapsed {
-    transform: translateX(-50%) translateY(-40px) !important;
+    transform: translateX(-50%) translateY(-60px) !important;
+  }
+  
+  .floating-toolbar.collapsed .toggle-toolbar-btn {
+    transform: translateY(60px);
   }
   
   .bottom-settings-bar.collapsed {
-    transform: translateX(-50%) translateY(40px) !important;
+    transform: translateX(-50%) translateY(60px) !important;
+  }
+
+  .bottom-settings-bar.collapsed .toggle-settings-btn {
+    transform: translateY(-60px);
   }
 }
 
