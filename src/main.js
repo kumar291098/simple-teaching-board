@@ -305,6 +305,7 @@ function handlePointerDown(e) {
   
   // Text Tool handler - places floating overlay input
   if (state.currentTool === 'text') {
+    e.preventDefault();
     createTextOverlay(e.clientX, e.clientY);
     return;
   }

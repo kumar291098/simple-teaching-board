@@ -769,6 +769,8 @@ body.board-theme-light .custom-eraser-cursor {
   min-width: 150px;
   overflow: hidden;
   resize: none;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 body.board-theme-light .floating-text-input {

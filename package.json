@@ -1,6 +1,6 @@
 {
   "name": "simple-teaching-board",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A beautiful, premium digital teaching board (blackboard/whiteboard) application.",
   "main": "electron-main.js",
   "scripts": {
